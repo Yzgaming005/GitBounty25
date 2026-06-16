@@ -79,6 +79,15 @@ multiUpkeepBtn.onclick = () => doManualUpkeep([...selectedBounties]);
 if (loadIssuesButton) loadIssuesButton.onclick = loadIssuesFromUI;
 if (createFromSelectedButton) createFromSelectedButton.onclick = createBountyFromSelected;
 
+// React to funding-amount input changes so the "Create bounty" button
+// reflects the current value. Without this, the button stays disabled
+// after the user types a positive amount, because updateCreateControls
+// is only called on connect/issue-select/create-flow events (issue #8).
+if (issuesFundingEthInput) {
+  issuesFundingEthInput.addEventListener("input", updateCreateControls);
+  issuesFundingEthInput.addEventListener("change", updateCreateControls);
+}
+
 // Keep UI synced with MetaMask account switching
 handleAccountChange();
 
