@@ -29,6 +29,9 @@ let readFactory;
 // Issue selection state
 let selectedIssue = null; // { owner, repo, number, title, body }
 
+// Bounty info button toggle state
+let activeInfoButton = null; // Track which bounty info button is currently active
+
 // Bounty multi-select state
 const selectedBounties = new Set();
 let maxUpkeepBatch = 3; // fetched from factory.getAutomationParams() on load
@@ -594,6 +597,24 @@ function renderIssueRow({ owner, repo, issue }) {
 }
 
 function selectIssue({ owner, repo, issue }, rowEl) {
+  // If clicking the same issue that's already selected, deselect it
+  if (selectedIssue && 
+      selectedIssue.owner === owner && 
+      selectedIssue.repo === repo && 
+      selectedIssue.number === issue.number) {
+    // Deselect
+    selectedIssue = null;
+    document.querySelectorAll(".issue-row.selected").forEach((el) => el.classList.remove("selected"));
+    setIssuesStatus("Issue deselected");
+    if (createFromSelectedButton) {
+      createFromSelectedButton.textContent = "Create bounty";
+      createFromSelectedButton.disabled = true;
+    }
+    updateCreateControls();
+    return;
+  }
+
+  // Otherwise, select the new issue
   selectedIssue = { owner, repo, number: issue.number, title: issue.title, body: issue.body };
 
   document.querySelectorAll(".issue-row.selected").forEach((el) => el.classList.remove("selected"));
@@ -978,6 +999,23 @@ function renderBountyRow(base, snap, err) {
 function openBountyDetailsPopover(anchorBtnEl, data) {
   if (!bountyPopoverEl) return;
 
+  // Toggle behavior: if clicking the same button that's already active, close popover
+  if (activeInfoButton === anchorBtnEl && !bountyPopoverEl.hidden) {
+    bountyPopoverEl.hidden = true;
+    activeInfoButton.classList.remove("pressed");
+    activeInfoButton = null;
+    return;
+  }
+
+  // Close previous popover if another button was active
+  if (activeInfoButton && activeInfoButton !== anchorBtnEl) {
+    activeInfoButton.classList.remove("pressed");
+  }
+
+  // Mark new button as active/pressed
+  activeInfoButton = anchorBtnEl;
+  anchorBtnEl.classList.add("pressed");
+
   const title = data.title || "Details";
   const subtitle = data.subtitle
     ? `<div class="mono" style="opacity:.9; margin-bottom:8px;">${escapeHtml(data.subtitle)}</div>`
@@ -1015,7 +1053,14 @@ function openBountyDetailsPopover(anchorBtnEl, data) {
   if (!popoverOutsideHandlerBound) {
     popoverOutsideHandlerBound = true;
     window.addEventListener("pointerdown", () => {
-      if (!bountyPopoverEl.hidden) bountyPopoverEl.hidden = true;
+      if (!bountyPopoverEl.hidden) {
+        bountyPopoverEl.hidden = true;
+        // Also remove pressed state from active button
+        if (activeInfoButton) {
+          activeInfoButton.classList.remove("pressed");
+          activeInfoButton = null;
+        }
+      }
     });
   }
 }
